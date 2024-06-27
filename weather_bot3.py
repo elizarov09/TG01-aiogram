@@ -7,7 +7,7 @@ from aiogram.filters import Command
 from aiogram.types import BotCommand
 import requests
 
-API_TOKEN = '7055051091:AAE8zmUdXdAqRUs9dRJZa4B1xZzRNp6Fkh4'
+API_TOKEN = 'TOKEN'
 
 logging.basicConfig(level=logging.INFO)
 
