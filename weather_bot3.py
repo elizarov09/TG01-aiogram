@@ -4,6 +4,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.filters import Command
+from aiogram.types import BotCommand
 import requests
 
 API_TOKEN = '7055051091:AAE8zmUdXdAqRUs9dRJZa4B1xZzRNp6Fkh4'
@@ -19,20 +20,30 @@ user_cities = {}
 class Form(StatesGroup):
     cities = State()
 
+commands = [
+    BotCommand(command="/start", description="Запустить бота и ввести любимые города"),
+    BotCommand(command="/help", description="Помощь по использованию бота")
+]
+
+async def set_commands(bot: Bot):
+    await bot.set_my_commands(commands)
+
 @dp.message(Command("start"))
 async def send_welcome(message: types.Message, state: FSMContext):
     await state.set_state(Form.cities)
-    await message.reply("Привет! Введите название вашего города или городов через запятую:")
+    await message.reply(
+        "Привет! Введите название ваших любимых городов для прогноза погоды через запятую:"
+    )
 
-@dp.message(Command("w"))
-async def show_weather(message: types.Message):
-    user_id = message.from_user.id
-    if user_id in user_cities:
-        cities = user_cities[user_id]
-        weather_data = get_weather_data(cities)
-        await message.reply(weather_data)
-    else:
-        await message.reply("Вы еще не ввели свои города. Используйте /start для ввода.")
+@dp.message(Command("help"))
+async def send_help(message: types.Message):
+    await message.reply(
+        "Команды бота:\n"
+        "/start - Запустить бота и ввести любимые города\n"
+        "/help - Помощь по использованию бота\n"
+        "Введите название города, чтобы получить прогноз погоды для него.\n"
+        "Или введите 'мои', чтобы получить прогноз для всех ваших любимых городов."
+    )
 
 @dp.message(Form.cities)
 async def save_cities(message: types.Message, state: FSMContext):
@@ -40,7 +51,27 @@ async def save_cities(message: types.Message, state: FSMContext):
     cities = message.text.split(',')
     user_cities[user_id] = [city.strip() for city in cities]
     await state.clear()
-    await message.reply(f"Города сохранены: {', '.join(user_cities[user_id])}")
+    await message.reply(
+        f"Ваши любимые города сохранены: {', '.join(user_cities[user_id])}\n"
+        "Введите название города, чтобы получить прогноз погоды для него.\n"
+        "Или введите 'мои', чтобы получить прогноз для всех ваших любимых городов."
+    )
+
+@dp.message(lambda message: message.text.lower() == "мои")
+async def show_favorite_weather(message: types.Message):
+    user_id = message.from_user.id
+    if user_id in user_cities:
+        cities = user_cities[user_id]
+        weather_data = get_weather_data(cities)
+        await message.reply(weather_data)
+    else:
+        await message.reply("Вы еще не ввели свои любимые города. Используйте /start для ввода.")
+
+@dp.message()
+async def show_city_weather(message: types.Message):
+    city = message.text.strip()
+    weather_data = get_weather_data([city])
+    await message.reply(weather_data)
 
 def get_coordinates(city):
     try:
